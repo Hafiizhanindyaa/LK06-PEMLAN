@@ -3,7 +3,16 @@ package src;
 import java.util.ArrayList;
 import java.util.Scanner;
 
+/**
+ * Siswa
+ * Menangani semua operasi data siswa: lihat, tambah, edit, hapus.
+ * Format data di file siswa.txt: NIS|Nama|Alamat
+ */
 public class Siswa {
+
+    // -------------------------------------------------------------------------
+    // Menu pilihan untuk modul Siswa
+    // -------------------------------------------------------------------------
 
     public static void menuSiswa(Scanner input) {
         while (true) {
@@ -14,7 +23,6 @@ public class Siswa {
             System.out.println("  2. Tambah Siswa Baru");
             System.out.println("  3. Edit Data Siswa");
             System.out.println("  4. Hapus Siswa");
-            System.out.println("  5. Cari Siswa (berdasarkan nama/NIS)");
             System.out.println("  0. Kembali ke Menu Utama");
             System.out.println("==========================================");
             System.out.print("Pilih menu: ");
@@ -25,14 +33,16 @@ public class Siswa {
                 case "2": tambahSiswa(input);   break;
                 case "3": editSiswa(input);     break;
                 case "4": hapusSiswa(input);    break;
-                case "5": cariSiswa(input);     break;
                 case "0": return;
                 default:  System.out.println("Pilihan tidak valid.");
             }
         }
     }
 
-    // Menampilkan semua data siswa beserta status jumlah pinjaman aktifnya
+    // -------------------------------------------------------------------------
+    // Menampilkan semua data siswa dari file
+    // -------------------------------------------------------------------------
+
     static void lihatSemuaSiswa() {
         ArrayList<String[]> dataSiswa = FileHelper.bacaSemua(FileHelper.FILE_SISWA);
 
@@ -42,41 +52,42 @@ public class Siswa {
         }
 
         System.out.println("\n--- DAFTAR SISWA (" + dataSiswa.size() + " orang) ---");
-        System.out.println("No   NIS        Nama                           Alamat                  Pinjaman Aktif");
-        System.out.println("-------------------------------------------------------------------------------------");
+        System.out.println("No   NIS          Nama                      Alamat");
+        System.out.println("-----------------------------------------------------------");
 
         int nomor = 1;
         for (String[] baris : dataSiswa) {
             if (baris.length >= 3) {
-                // Mengecek berapa buku yang sedang dipinjam siswa ini
-                int jumlahPinjam = FileHelper.hitungPinjamanAktif(baris[0]);
-                String infoPinjaman = jumlahPinjam + " buku";
-                
-                System.out.printf("%-5d%-11s%-31s%-24s%s%n",
-                    nomor, baris[0], baris[1], baris[2], infoPinjaman);
+                // Cetak dengan format rapi
+                System.out.printf("%-5d%-13s%-27s%s%n", nomor, baris[0], baris[1], baris[2]);
                 nomor++;
             }
         }
     }
 
+    // -------------------------------------------------------------------------
     // Menambah siswa baru
+    // -------------------------------------------------------------------------
+
     static void tambahSiswa(Scanner input) {
         System.out.println("\n--- TAMBAH SISWA BARU ---");
 
-        System.out.print("NIS Siswa  : ");
+        System.out.print("NIS    : ");
         String nis = input.nextLine().trim().toUpperCase();
 
+        // Validasi: NIS tidak boleh kosong
         if (nis.isEmpty()) {
             System.out.println("NIS tidak boleh kosong.");
             return;
         }
 
+        // Validasi: NIS tidak boleh sama dengan yang sudah ada
         if (FileHelper.cariSiswa(nis) != null) {
-            System.out.println("Siswa dengan NIS " + nis + " sudah terdaftar.");
+            System.out.println("NIS " + nis + " sudah terdaftar.");
             return;
         }
 
-        System.out.print("Nama Siswa : ");
+        System.out.print("Nama   : ");
         String nama = input.nextLine().trim();
 
         if (nama.isEmpty()) {
@@ -84,20 +95,24 @@ public class Siswa {
             return;
         }
 
-        System.out.print("Alamat     : ");
+        System.out.print("Alamat : ");
         String alamat = input.nextLine().trim();
 
         // Simpan ke file: NIS|Nama|Alamat
         FileHelper.tambahBaris(FileHelper.FILE_SISWA, new String[]{nis, nama, alamat});
-        System.out.println("Siswa \"" + nama + "\" berhasil ditambahkan.");
+        System.out.println("Siswa " + nama + " berhasil ditambahkan.");
     }
 
-    // Mengedit data siswa
+    // -------------------------------------------------------------------------
+    // Mengedit data siswa yang sudah ada
+    // -------------------------------------------------------------------------
+
     static void editSiswa(Scanner input) {
         System.out.println("\n--- EDIT DATA SISWA ---");
-        System.out.print("Masukkan NIS Siswa yang ingin diedit: ");
+        System.out.print("Masukkan NIS yang ingin diedit: ");
         String nis = input.nextLine().trim().toUpperCase();
 
+        // Baca semua data dulu
         ArrayList<String[]> semuaData = FileHelper.bacaSemua(FileHelper.FILE_SISWA);
         boolean ketemu = false;
 
@@ -112,6 +127,7 @@ public class Siswa {
                 System.out.print("Alamat baru : ");
                 String alamatBaru = input.nextLine().trim();
 
+                // Hanya update jika pengguna mengisi sesuatu
                 if (!namaBaru.isEmpty()) baris[1] = namaBaru;
                 if (!alamatBaru.isEmpty()) baris[2] = alamatBaru;
 
@@ -121,6 +137,7 @@ public class Siswa {
         }
 
         if (ketemu) {
+            // Tulis ulang semua data ke file
             FileHelper.tulisUlang(FileHelper.FILE_SISWA, semuaData);
             System.out.println("Data siswa berhasil diperbarui.");
         } else {
@@ -128,15 +145,18 @@ public class Siswa {
         }
     }
 
-    // Menghapus siswa
+    // -------------------------------------------------------------------------
+    // Menghapus data siswa
+    // -------------------------------------------------------------------------
+
     static void hapusSiswa(Scanner input) {
         System.out.println("\n--- HAPUS SISWA ---");
-        System.out.print("Masukkan NIS Siswa yang ingin dihapus: ");
+        System.out.print("Masukkan NIS yang ingin dihapus: ");
         String nis = input.nextLine().trim().toUpperCase();
 
-        // LOGIKA PENTING: Siswa yang masih meminjam buku tidak boleh dihapus
+        // Cek dulu: siswa ini masih punya pinjaman aktif?
         if (FileHelper.hitungPinjamanAktif(nis) > 0) {
-            System.out.println("Gagal menghapus. Siswa ini masih memiliki buku yang belum dikembalikan.");
+            System.out.println("Tidak bisa dihapus. Siswa masih memiliki pinjaman buku yang belum dikembalikan.");
             return;
         }
 
@@ -147,6 +167,7 @@ public class Siswa {
         for (String[] baris : semuaData) {
             if (baris.length >= 1 && baris[0].equalsIgnoreCase(nis)) {
                 ketemu = true;
+                // Baris ini tidak dimasukkan ke dataBaru -> terhapus
             } else {
                 dataBaru.add(baris);
             }
@@ -154,42 +175,9 @@ public class Siswa {
 
         if (ketemu) {
             FileHelper.tulisUlang(FileHelper.FILE_SISWA, dataBaru);
-            System.out.println("Data siswa berhasil dihapus.");
+            System.out.println("Siswa berhasil dihapus.");
         } else {
             System.out.println("Siswa dengan NIS " + nis + " tidak ditemukan.");
-        }
-    }
-
-    // Mencari siswa berdasarkan kata kunci (nama atau NIS)
-    static void cariSiswa(Scanner input) {
-        System.out.println("\n--- CARI SISWA ---");
-        System.out.print("Masukkan kata kunci (NIS/Nama): ");
-        String kataKunci = input.nextLine().trim().toLowerCase();
-
-        ArrayList<String[]> semuaSiswa = FileHelper.bacaSemua(FileHelper.FILE_SISWA);
-        boolean adaHasil = false;
-
-        System.out.println("NIS        Nama                           Alamat                  Pinjaman Aktif");
-        System.out.println("--------------------------------------------------------------------------------");
-
-        for (String[] baris : semuaSiswa) {
-            if (baris.length >= 3) {
-                // Cek apakah kata kunci ada di NIS atau Nama
-                boolean cocok = baris[0].toLowerCase().contains(kataKunci)
-                             || baris[1].toLowerCase().contains(kataKunci);
-
-                if (cocok) {
-                    int jumlahPinjam = FileHelper.hitungPinjamanAktif(baris[0]);
-                    String infoPinjaman = jumlahPinjam + " buku";
-                    
-                    System.out.printf("%-11s%-31s%-24s%s%n", baris[0], baris[1], baris[2], infoPinjaman);
-                    adaHasil = true;
-                }
-            }
-        }
-
-        if (!adaHasil) {
-            System.out.println("Tidak ada siswa dengan kata kunci \"" + kataKunci + "\".");
         }
     }
 }
